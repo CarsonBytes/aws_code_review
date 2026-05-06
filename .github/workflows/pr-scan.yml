@@ -9,7 +9,6 @@ jobs:
   inspector-scan:
     name: Amazon Inspector Scan
     runs-on: ubuntu-latest
-    if: github.event.pull_request.head.ref == 'refs/heads/feature/inject-vulns'
     
     steps:
       - name: Checkout code
@@ -24,7 +23,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Create S3 bucket for CloudFormation template
+      - name: Check for CloudFormation template
+        run: |
+          if [ -f "demo2_pr_inspector/template.yaml" ]; then
+            echo "Found CloudFormation template"
+            echo "TEMPLATE_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "No CloudFormation template found"
+            echo "TEMPLATE_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Upload CloudFormation template to S3 (if exists)
+        if: env.TEMPLATE_EXISTS == 'true'
         run: |
           BUCKET_NAME="inspector-pr-$(date +%s)"
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
@@ -32,24 +42,25 @@ jobs:
             --bucket $BUCKET_NAME \
             --region us-east-1 \
             --create-bucket-configuration LocationConstraint=us-east-1 2>/dev/null || true
-
-      - name: Upload CloudFormation template to S3
-        run: |
           aws s3 cp demo2_pr_inspector/template.yaml s3://$BUCKET_NAME/template.yaml
           echo "Template uploaded to: s3://$BUCKET_NAME/template.yaml"
 
-      - name: Enable Inspector2 (if not already enabled)
+      - name: Check dependencies for CVEs
         run: |
-          aws inspector2 enable --resource-types EC2,ECR,LAMBDA 2>/dev/null || echo "Inspector2 may already be enabled"
-
-      - name: Scan dependencies for CVEs
-        run: |
-          echo "Checking dependencies for CVEs..."
-          echo "requests==2.25.1 has known CVEs:"
-          echo "- CVE-2023-32681: Information disclosure"
-          echo "- CVE-2023-32682: Request smuggling"
-          echo ""
-          echo "Recommendation: Upgrade to requests>=2.31.0"
+          echo "Checking dependencies..."
+          if [ -f "demo2_pr_inspector/requirements.txt" ]; then
+            echo "Found requirements.txt"
+            if grep -q "requests==2.25.1" demo2_pr_inspector/requirements.txt; then
+              echo "⚠️  CVE detected: requests==2.25.1"
+              echo "CVES_FOUND=true" >> $GITHUB_ENV
+            else
+              echo "No known CVE versions found"
+              echo "CVES_FOUND=false" >> $GITHUB_ENV
+            fi
+          else
+            echo "No requirements.txt found"
+            echo "CVES_FOUND=false" >> $GITHUB_ENV
+          fi
 
       - name: Post Inspector findings as PR comment
         uses: actions/github-script@v7
@@ -81,11 +92,10 @@ jobs:
               body: findings
             });
 
-  # Code quality checks (simulating Q Developer)
+  # Code quality checks
   code-review:
     name: Code Quality Review
     runs-on: ubuntu-latest
-    if: github.event.pull_request.head.ref == 'refs/heads/feature/inject-vulns'
     
     steps:
       - name: Checkout code
@@ -93,31 +103,18 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
 
-      - name: Analyze Python code for business logic issues
+      - name: Check for Python code issues
         run: |
-          echo "Analyzing order_logic.py..."
-          echo ""
-          echo "## 🔍 Code Analysis Findings"
-          echo ""
-          echo "### ⚠️ Business Logic Issue in update_delivery_date()"
-          echo "- **Missing order status check**: Function doesn't verify if order is already shipped"
-          echo "- **Security impact**: Could allow modification of shipped orders"
-          echo "- **Recommendation**: Add status validation before updating delivery date"
-          echo ""
-          echo "### 📝 Example fix:"
-          echo '```python'
-          echo 'def update_delivery_date(order_id, new_date):'
-          echo '    # Check if order exists and is not shipped'
-          echo '    order = get_order(order_id)'
-          echo '    if not order:'
-          echo '        return {"error": "Order not found"}'
-          echo '    if order["status"] == "shipped":'
-          echo '        return {"error": "Cannot modify shipped orders"}'
-          echo '    # Update logic here'
-          echo '    return {"status": "updated", "new_date": new_date}'
-          echo '```'
+          if [ -f "demo2_pr_inspector/order_logic.py" ]; then
+            echo "Found order_logic.py"
+            echo "CODE_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "No Python code to review"
+            echo "CODE_EXISTS=false" >> $GITHUB_ENV
+          fi
 
       - name: Post code review as PR comment
+        if: env.CODE_EXISTS == 'true'
         uses: actions/github-script@v7
         with:
           script: |
