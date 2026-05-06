@@ -1,0 +1,68 @@
+name: Amazon Inspector PR Scan
+
+on:
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  inspector-scan:
+    name: Amazon Inspector Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read    # Required to read repo
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (Access Keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Run Amazon Inspector Scan
+        id: inspector
+        uses: aws-actions/vulnerability-scan-github-action-for-amazon-inspector@v1
+        with:
+          artifact_type: 'repository'
+          artifact_path: './'
+          display_vulnerability_findings: 'true'
+
+      - name: Check for critical vulnerabilities
+        run: |
+          echo "=========================================="
+          echo "🔍 Amazon Inspector Scan Results"
+          echo "=========================================="
+          echo ""
+          
+          # Check if there are critical findings
+          if [ -n "${{ steps.inspector.outputs.vulnerability_count }}" ]; then
+            VULN_COUNT="${{ steps.inspector.outputs.vulnerability_count }}"
+            echo "Total vulnerabilities found: $VULN_COUNT"
+            echo ""
+            
+            # Display severity breakdown
+            echo "Severity breakdown:"
+            echo "- Critical: ${{ steps.inspector.outputs.critical_count || 0 }}"
+            echo "- High: ${{ steps.inspector.outputs.high_count || 0 }}"
+            echo "- Medium: ${{ steps.inspector.outputs.medium_count || 0 }}"
+            echo "- Low: ${{ steps.inspector.outputs.low_count || 0 }}"
+            
+            # Block if critical or high vulnerabilities found
+            CRITICAL=${{ steps.inspector.outputs.critical_count || 0 }}
+            HIGH=${{ steps.inspector.outputs.high_count || 0 }}
+            
+            if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+              echo ""
+              echo "❌ SECURITY ALERT: Critical or High vulnerabilities detected!"
+              echo "🚫 PR BLOCKED: Cannot merge until vulnerabilities are fixed"
+              exit 1
+            fi
+          else
+            echo "✅ No vulnerabilities detected"
+            echo "✅ PR APPROVED FOR MERGE"
+          fi
