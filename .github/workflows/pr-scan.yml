@@ -1,128 +1,90 @@
-name: PR Dual Scan (Inspector + Q Developer)
+name: PR Security Scan Demo
 
 on:
   pull_request:
     branches: [main, master]
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
 
 jobs:
-  # Amazon Inspector scanning for CloudFormation and dependencies
-  inspector-scan:
-    name: Amazon Inspector Scan
+  security-scan:
+    name: Security Scan Demo
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Enable Amazon Inspector2
+      - name: Display CloudFormation Security Issue
         run: |
-          echo "Enabling Amazon Inspector2..."
-          aws inspector2 enable --resource-types EC2,ECR,LAMBDA 2>/dev/null || \
-            echo "Inspector2 may already be enabled"
+          echo "=========================================="
+          echo "🔍 CLOUDFORMATION TEMPLATE SCAN"
+          echo "=========================================="
+          echo ""
           
-          echo "Waiting for Inspector2 to be ready..."
-          sleep 10
-
-      - name: Check for CloudFormation template
-        run: |
           if [ -f "demo2_pr_inspector/template.yaml" ]; then
-            echo "✅ Found CloudFormation template"
-            echo "TEMPLATE_EXISTS=true" >> $GITHUB_ENV
-            
-            # Display template content
-            echo "Template content:"
-            cat demo2_pr_inspector/template.yaml
+            echo "✅ Found: demo2_pr_inspector/template.yaml"
+            echo ""
+            echo "🚨 CRITICAL SECURITY ISSUE DETECTED:"
+            echo ""
+            echo "File: template.yaml"
+            echo "Issue: AdministratorAccess policy"
+            echo "Location:"
+            grep -n "AdministratorAccess" demo2_pr_inspector/template.yaml
+            echo ""
+            echo "📋 Problem:"
+            echo "- IAM role has full AWS administrative access"
+            echo "- Violates least privilege principle"
+            echo "- High security risk"
+            echo ""
+            echo "💡 Recommendation:"
+            echo "Replace with specific, limited policies:"
+            echo '```yaml'
+            echo 'ManagedPolicyArns:'
+            echo '  - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
+            echo '  - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'
+            echo '```'
           else
             echo "❌ No CloudFormation template found"
-            echo "TEMPLATE_EXISTS=false" >> $GITHUB_ENV
           fi
 
-      - name: Check dependencies for CVEs
+      - name: Display Dependency Security Issue
         run: |
-          echo "🔍 Checking dependencies for CVEs..."
+          echo ""
+          echo "=========================================="
+          echo "📦 DEPENDENCY VULNERABILITY SCAN"
+          echo "=========================================="
+          echo ""
+          
           if [ -f "demo2_pr_inspector/requirements.txt" ]; then
-            echo "✅ Found requirements.txt"
+            echo "✅ Found: demo2_pr_inspector/requirements.txt"
             echo "Content:"
             cat demo2_pr_inspector/requirements.txt
             echo ""
-            
-            if grep -q "requests==2.25.1" demo2_pr_inspector/requirements.txt; then
-              echo "⚠️  CVE DETECTED: requests==2.25.1"
-              echo "Known CVEs in this version:"
-              echo "- CVE-2023-32681: Information disclosure"
-              echo "- CVE-2023-32682: Request smuggling"
-              echo ""
-              echo "📋 Recommendation: Upgrade to requests>=2.31.0"
-              echo "CVES_FOUND=true" >> $GITHUB_ENV
-            else
-              echo "✅ No known CVE versions found"
-              echo "CVES_FOUND=false" >> $GITHUB_ENV
-            fi
+            echo "⚠️  CVE VULNERABILITIES DETECTED:"
+            echo ""
+            echo "Package: requests==2.25.1"
+            echo "Known CVEs:"
+            echo "- CVE-2023-32681: Information disclosure"
+            echo "- CVE-2023-32682: Request smuggling"
+            echo ""
+            echo "📋 Impact:"
+            echo "- High security risk"
+            echo "- Potential data leakage"
+            echo "- Network attack vector"
+            echo ""
+            echo "💡 Recommendation:"
+            echo "Upgrade to secure version:"
+            echo "requests>=2.31.0"
           else
             echo "❌ No requirements.txt found"
-            echo "CVES_FOUND=false" >> $GITHUB_ENV
           fi
 
-      - name: Display Inspector findings summary
+      - name: Display Code Quality Issue
         run: |
+          echo ""
           echo "=========================================="
-          echo "🔍 AMAZON INSPECTOR SCAN RESULTS"
+          echo "🤖 CODE QUALITY REVIEW"
           echo "=========================================="
-          echo ""
-          echo "� Files scanned:"
-          echo "- demo2_pr_inspector/template.yaml"
-          echo "- demo2_pr_inspector/requirements.txt"
-          echo ""
-          echo "🚨 CRITICAL FINDINGS (1):"
-          echo "1. CloudFormation Template - AdministratorAccess Policy"
-          echo "   • IAM role has full AWS administrative access"
-          echo "   • Violates least privilege principle"
-          echo "   • Recommendation: Use specific policies instead"
-          echo ""
-          echo "⚠️ HIGH FINDINGS (2):"
-          echo "1. Dependency - requests==2.25.1"
-          echo "   • CVE-2023-32681: Information disclosure"
-          echo "   • CVE-2023-32682: Request smuggling"
-          echo "   • Recommendation: Upgrade to requests>=2.31.0"
-          echo ""
-          echo "� Summary:"
-          echo "- Total findings: 3"
-          echo "- Critical: 1"
-          echo "- High: 2"
-          echo ""
-          echo "🔗 Next steps:"
-          echo "1. Fix AdministratorAccess policy in template.yaml"
-          echo "2. Update requests dependency to >=2.31.0"
-          echo "3. Re-scan after fixes"
-          echo ""
-          echo "� To view in AWS Inspector Console:"
-          echo "https://console.aws.amazon.com/inspector2"
-          echo "→ Navigate to 'Findings' → Filter by 'CloudFormation'"
-
-  # Code quality checks (simulating Amazon Q Developer)
-  code-review:
-    name: Amazon Q Developer Code Review
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - name: Analyze Python code
-        run: |
-          echo "🤖 Analyzing code with Amazon Q Developer..."
           echo ""
           
           if [ -f "demo2_pr_inspector/order_logic.py" ]; then
@@ -130,30 +92,24 @@ jobs:
             echo "Content:"
             cat demo2_pr_inspector/order_logic.py
             echo ""
-            
-            echo "=========================================="
-            echo "CODE REVIEW FINDINGS"
-            echo "=========================================="
+            echo "⚠️  BUSINESS LOGIC ISSUE DETECTED:"
             echo ""
-            echo "⚠️ BUSINESS LOGIC ISSUE"
-            echo "File: order_logic.py"
             echo "Function: update_delivery_date(order_id, new_date)"
+            echo "Problem: Missing validation logic"
             echo ""
-            echo "🔍 Problem: Missing validation logic"
-            echo "- No check if order exists"
-            echo "- No check if order is already shipped"
-            echo "- Allows modification of shipped orders"
+            echo "📋 Issues:"
+            echo "1. No check if order exists"
+            echo "2. No check if order is already shipped"
+            echo "3. Allows modification of shipped orders"
             echo ""
-            echo "📈 Impact:"
-            echo "- Business Impact: HIGH (data integrity issues)"
-            echo "- Security Impact: MEDIUM (potential fraud)"
-            echo "- Priority: SHOULD FIX"
+            echo "📈 Impact Assessment:"
+            echo "- Business Impact: HIGH"
+            echo "- Security Impact: MEDIUM"
+            echo "- Data Integrity: COMPROMISED"
             echo ""
-            echo "💡 Recommendation:"
+            echo "💡 Recommended Fix:"
             echo '```python'
             echo 'def update_delivery_date(order_id, new_date):'
-            echo '    """Update delivery date with proper validation."""'
-            echo '    '
             echo '    # 1. Check if order exists'
             echo '    order = get_order(order_id)'
             echo '    if not order:'
@@ -163,21 +119,40 @@ jobs:
             echo '    if order.get("status") == "shipped":'
             echo '        return {"error": "Cannot modify shipped orders"}'
             echo '    '
-            echo '    # 3. Validate new date'
-            echo '    if not is_valid_date(new_date):'
-            echo '        return {"error": "Invalid date format"}'
-            echo '    '
-            echo '    # 4. Update delivery date'
+            echo '    # 3. Update logic'
             echo '    order["delivery_date"] = new_date'
             echo '    save_order(order)'
             echo '    '
             echo '    return {"status": "updated", "new_date": new_date}'
             echo '```'
-            echo ""
-            echo "✅ Expected after fix:"
-            echo "- Proper error handling for non-existent orders"
-            echo "- Business rule enforcement for shipped orders"
-            echo "- Input validation for date format"
           else
-            echo "❌ No order_logic.py found for review"
+            echo "❌ No order_logic.py found"
           fi
+
+      - name: Display Summary
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "📊 SCAN SUMMARY"
+          echo "=========================================="
+          echo ""
+          echo "🔍 Total Issues Found: 3"
+          echo ""
+          echo "1. 🚨 CRITICAL: CloudFormation - AdministratorAccess"
+          echo "   • IAM role has full AWS access"
+          echo "   • Fix: Use least-privilege policies"
+          echo ""
+          echo "2. ⚠️  HIGH: Dependency - requests==2.25.1 CVEs"
+          echo "   • CVE-2023-32681, CVE-2023-32682"
+          echo "   • Fix: Upgrade to requests>=2.31.0"
+          echo ""
+          echo "3. ⚠️  MEDIUM: Code - Missing validation"
+          echo "   • No order status check"
+          echo "   • Fix: Add validation logic"
+          echo ""
+          echo "✅ Demo Complete: PR-triggered security scan working"
+          echo ""
+          echo "💡 This simulates:"
+          echo "- Amazon Inspector: Infrastructure & dependency scanning"
+          echo "- Amazon Q Developer: Code quality review"
+          echo "- Automated PR feedback"
