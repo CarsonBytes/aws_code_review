@@ -1,0 +1,7 @@
+Resources:
+  MyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AdminRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
