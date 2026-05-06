@@ -22,7 +22,8 @@ jobs:
           aws-region: us-east-1
 
       - name: Enable Amazon Inspector2
-        run: aws inspector2 enable
+        run: |
+          aws inspector2 enable --resource-types CLOUDFORMATION
 
       - name: Scan CloudFormation Template
         run: |
