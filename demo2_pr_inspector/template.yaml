@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template with multiple security vulnerabilities for Amazon Inspector demo
+
+Resources:
+  # ========== CRITICAL SEVERITY ISSUES ==========
+  
+  # 1. IAM Role with AdministratorAccess (CRITICAL)
+  AdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: FullAdminRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess  # CRITICAL: Full admin access
+        - arn:aws:iam::aws:policy/IAMFullAccess        # CRITICAL: IAM full access
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess   # CRITICAL: S3 full access
+  
+  # 2. IAM User with access keys (CRITICAL)
+  RootLikeUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: DeploymentUser
+      Policies:
+        - PolicyName: RootLikePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: "*"  # CRITICAL: Wildcard action
+                Resource: "*"  # CRITICAL: Wildcard resource
+  
+  # 3. S3 Bucket with public access (CRITICAL)
+  PublicDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-public-data"
+      AccessControl: PublicReadWrite  # CRITICAL: Public read/write access
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+  
+  # ========== HIGH SEVERITY ISSUES ==========
+  
+  # 4. Security Group allowing all traffic (HIGH)
+  OpenSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group allowing all traffic
+      SecurityGroupIngress:
+        - IpProtocol: "-1"  # HIGH: All protocols
+          CidrIp: 0.0.0.0/0  # HIGH: All IPs
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+  
+  # 5. KMS Key with overly permissive policy (HIGH)
+  EncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Encryption key with overly permissive policy
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-consolepolicy
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: "*"  # HIGH: Wildcard principal
+            Action: "kms:*"
+            Resource: "*"
+  
+  # 6. Lambda function with excessive permissions (HIGH)
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-function"
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt AdminRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          
+          def handler(event, context):
+              # Function with excessive permissions
+              iam = boto3.client('iam')
+              s3 = boto3.client('s3')
+              
+              # Can do anything with admin role
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Hello from Lambda!')
+              }
+      Timeout: 300  # HIGH: Long timeout
+      MemorySize: 3008  # HIGH: High memory allocation
+  
+  # ========== MEDIUM SEVERITY ISSUES ==========
+  
+  # 7. IAM Policy with wildcard actions (MEDIUM)
+  WildcardPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: S3WildcardPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: "s3:*"  # MEDIUM: Wildcard S3 actions
+            Resource: "arn:aws:s3:::example-bucket/*"
+      Roles:
+        - !Ref AdminRole
+  
+  # 8. CloudTrail not enabled (MEDIUM)
+  # Missing CloudTrail configuration for audit logging
+  
+  # 9. No encryption for S3 bucket (MEDIUM)
+  UnencryptedBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-unencrypted"
+      # MEDIUM: No server-side encryption specified
+  
+  # ========== LOW SEVERITY ISSUES ==========
+  
+  # 10. IAM Role without permissions boundary (LOW)
+  RoleWithoutBoundary:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: RoleWithoutPermissionsBoundary
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      # LOW: No permissions boundary
+  
+  # 11. S3 bucket without versioning (LOW)
+  BucketWithoutVersioning:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-no-versioning"
+      # LOW: Versioning not enabled
+  
+  # 12. No tags on resources (LOW)
+  UntaggedResource:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: UntaggedUser
+      # LOW: No tags for cost allocation/management
+
+Outputs:
+  AdminRoleArn:
+    Description: ARN of the admin role (CRITICAL vulnerability)
+    Value: !GetAtt AdminRole.Arn
+  
+  PublicBucketName:
+    Description: Name of the public S3 bucket (CRITICAL vulnerability)
+    Value: !Ref PublicDataBucket
+  
+  LambdaFunctionName:
+    Description: Name of the Lambda function with excessive permissions (HIGH vulnerability)
+    Value: !Ref LambdaFunction
+  
+  SecurityGroupId:
+    Description: ID of the open security group (HIGH vulnerability)
+    Value: !Ref OpenSecurityGroup

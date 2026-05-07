@@ -1,0 +1,89 @@
+# ========== CRITICAL SEVERITY VULNERABILITIES ==========
+
+# 1. requests 2.25.1 - Multiple critical CVEs
+# CVE-2023-32681: Information disclosure vulnerability
+# CVE-2023-32682: Request smuggling vulnerability
+requests==2.25.1
+
+# 2. urllib3 1.26.0 - Critical vulnerability
+# CVE-2021-33503: CRLF injection
+urllib3==1.26.0
+
+# 3. pyyaml 5.1 - Arbitrary code execution
+# CVE-2020-1747: Arbitrary code execution via yaml.load()
+pyyaml==5.1
+
+# ========== HIGH SEVERITY VULNERABILITIES ==========
+
+# 4. django 2.2.0 - Multiple high severity CVEs
+# CVE-2020-7471: SQL injection in django.contrib.postgres
+# CVE-2019-19844: Potential account hijack
+django==2.2.0
+
+# 5. flask 0.12.0 - Multiple vulnerabilities
+# CVE-2018-1000656: DoS via large JSON files
+# CVE-2019-1010083: Information disclosure
+flask==0.12.0
+
+# 6. cryptography 2.5 - Vulnerable to timing attacks
+# CVE-2020-25659: Timing attack vulnerability
+cryptography==2.5
+
+# ========== MEDIUM SEVERITY VULNERABILITIES ==========
+
+# 7. numpy 1.16.0 - Buffer overflow
+# CVE-2019-6446: Buffer overflow in numpy.ma
+numpy==1.16.0
+
+# 8. pillow 5.4.1 - Multiple medium CVEs
+# CVE-2020-5310: Out-of-bounds read
+# CVE-2020-5311: Out-of-bounds write
+pillow==5.4.1
+
+# 9. sqlalchemy 1.2.0 - SQL injection
+# CVE-2019-7164: SQL injection via order_by
+sqlalchemy==1.2.0
+
+# ========== LOW SEVERITY VULNERABILITIES ==========
+
+# 10. jinja2 2.10.0 - Information disclosure
+# CVE-2019-10906: Information disclosure via error messages
+jinja2==2.10.0
+
+# 11. markupsafe 1.1.0 - XSS vulnerability
+# CVE-2019-11324: XSS via urlize filter
+markupsafe==1.1.0
+
+# 12. werkzeug 0.14.1 - Path traversal
+# CVE-2019-14806: Path traversal
+werkzeug==0.14.1
+
+# ========== ADDITIONAL VULNERABLE PACKAGES ==========
+
+# 13. boto3 1.9.0 - Old version with known issues
+boto3==1.9.0
+
+# 14. botocore 1.12.0 - Old version
+botocore==1.12.0
+
+# 15. tornado 4.5.0 - XSS vulnerability
+# CVE-2018-6594: XSS in template rendering
+tornado==4.5.0
+
+# 16. paramiko 2.4.0 - Authentication bypass
+# CVE-2018-7750: Authentication bypass
+paramiko==2.4.0
+
+# 17. twisted 18.9.0 - Multiple vulnerabilities
+twisted==18.9.0
+
+# 18. lxml 4.3.0 - XXE vulnerability
+# CVE-2021-43818: XXE vulnerability
+lxml==4.3.0
+
+# 19. psycopg2 2.7.7 - SQL injection
+# CVE-2021-29547: SQL injection
+psycopg2==2.7.7
+
+# 20. pymongo 3.7.0 - No authentication by default
+pymongo==3.7.0
